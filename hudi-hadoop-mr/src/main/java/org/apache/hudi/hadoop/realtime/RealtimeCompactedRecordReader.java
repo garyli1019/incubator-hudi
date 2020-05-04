@@ -81,7 +81,7 @@ class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
       // TODO(VC): Right now, we assume all records in log, have a matching base record. (which
       // would be true until we have a way to index logs too)
       // return from delta records map if we have some match.
-      String key = arrayWritable.get()[HoodieParquetRealtimeInputFormat.HOODIE_RECORD_KEY_COL_POS].toString();
+      String key = arrayWritable.get()[HoodieRealtimeInputFormatUtils.HOODIE_RECORD_KEY_COL_POS].toString();
       if (deltaRecordMap.containsKey(key)) {
         // TODO(NA): Invoke preCombine here by converting arrayWritable to Avro. This is required since the
         // deltaRecord may not be a full record and needs values of columns from the parquet
