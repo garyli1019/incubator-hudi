@@ -162,6 +162,44 @@ class TestDataSource {
     assertEquals(100, hoodieROViewDF1.count()) // still 100, since we only updated
   }
 
+@Test def testSparkDatasourceForMergeOnRead() {
+    val records1 = DataSourceTestUtils.convertToStringList(dataGen.generateInserts("001", 100)).toList
+    val inputDF1: Dataset[Row] = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option("hoodie.compact.inline", "false") // else fails due to compaction & deltacommit instant times being same
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL)
+      .option(DataSourceWriteOptions.TABLE_TYPE_OPT_KEY, DataSourceWriteOptions.MOR_TABLE_TYPE_OPT_VAL)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+
+    assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
+
+    println(basePath)
+    // Read RO View
+    val hoodieROViewDF1 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_REALTIME_OPT_VAL)
+      .load(basePath)
+    assertEquals(100, hoodieROViewDF1.count()) // still 100, since we only updated
+
+    val records2 = DataSourceTestUtils.convertToStringList(dataGen.generateUpdates("002", 100)).toList
+    val inputDF2: Dataset[Row] = spark.read.json(spark.sparkContext.parallelize(records2, 2))
+    val uniqueKeyCnt = inputDF2.select("_row_key").distinct().count()
+
+    // Upsert Operation
+    inputDF2.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .mode(SaveMode.Append)
+      .save(basePath)
+
+    // Read RO View
+    val hoodieROViewDF2 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_REALTIME_OPT_VAL)
+      .load(basePath);
+    assertEquals(100, hoodieROViewDF2.count()) // still 100, since we only updated
+    assertTrue(hoodieROViewDF2.select("_hoodie_commit_time").head().get(0) != hoodieROViewDF1.select("_hoodie_commit_time").head().get(0))
+  }
+
   @Test def testDropInsertDup(): Unit = {
     val insert1Cnt = 10
     val insert2DupKeyCnt = 9

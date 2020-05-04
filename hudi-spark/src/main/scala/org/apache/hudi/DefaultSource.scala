@@ -57,7 +57,8 @@ class DefaultSource extends RelationProvider
     if (path.isEmpty) {
       throw new HoodieException("'path' must be specified.")
     }
-
+    sqlContext.setConf("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    sqlContext.sparkContext.getConf.registerKryoClasses(Array[Class[_]](Class.forName("org.apache.hadoop.conf.Configuration")))
     if (parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_SNAPSHOT_OPT_VAL)) {
       // this is just effectively RO view only, where `path` can contain a mix of
       // non-hoodie/hoodie path files. set the path filter up
@@ -76,6 +77,8 @@ class DefaultSource extends RelationProvider
         className = "parquet",
         options = parameters)
         .resolveRelation()
+    } else if (parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_REALTIME_OPT_VAL)) {
+      new RealtimeRelation(sqlContext, path.get, optParams, schema)
     } else if (parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_INCREMENTAL_OPT_VAL)) {
       new IncrementalRelation(sqlContext, path.get, optParams, schema)
     } else {

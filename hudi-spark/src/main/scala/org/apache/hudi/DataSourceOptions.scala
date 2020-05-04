@@ -48,6 +48,7 @@ object DataSourceReadOptions {
   val QUERY_TYPE_SNAPSHOT_OPT_VAL = "snapshot"
   val QUERY_TYPE_READ_OPTIMIZED_OPT_VAL = "read_optimized"
   val QUERY_TYPE_INCREMENTAL_OPT_VAL = "incremental"
+  val QUERY_TYPE_REALTIME_OPT_VAL = "realtime"
   val DEFAULT_QUERY_TYPE_OPT_VAL: String = QUERY_TYPE_SNAPSHOT_OPT_VAL
 
   @Deprecated
