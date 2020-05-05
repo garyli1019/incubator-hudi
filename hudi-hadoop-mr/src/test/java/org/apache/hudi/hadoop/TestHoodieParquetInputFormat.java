@@ -29,6 +29,7 @@ import org.apache.hudi.common.table.timeline.HoodieInstant;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
 import org.apache.hudi.common.table.timeline.TimelineMetadataUtils;
 import org.apache.hudi.hadoop.testutils.InputFormatTestUtil;
+import org.apache.hudi.hadoop.utils.HoodieHiveUtil;
 
 import org.apache.avro.Schema;
 import org.apache.hadoop.fs.FileStatus;
@@ -103,7 +104,7 @@ public class TestHoodieParquetInputFormat {
     timeline.setInstants(instants);
 
     // Verify getCommitsTimelineBeforePendingCompaction does not return instants after first compaction instant
-    HoodieTimeline filteredTimeline = new HoodieParquetInputFormat().filterInstantsTimeline(timeline);
+    HoodieTimeline filteredTimeline = inputFormat.filterInstantsTimeline(timeline);
     assertTrue(filteredTimeline.containsInstant(t1));
     assertTrue(filteredTimeline.containsInstant(t2));
     assertFalse(filteredTimeline.containsInstant(t3));
@@ -116,7 +117,7 @@ public class TestHoodieParquetInputFormat {
     instants.remove(t3);
     timeline = new HoodieActiveTimeline(metaClient);
     timeline.setInstants(instants);
-    filteredTimeline = new HoodieParquetInputFormat().filterInstantsTimeline(timeline);
+    filteredTimeline = inputFormat.filterInstantsTimeline(timeline);
 
     // verify all remaining instants are returned.
     assertTrue(filteredTimeline.containsInstant(t1));
@@ -130,7 +131,7 @@ public class TestHoodieParquetInputFormat {
     instants.remove(t5);
     timeline = new HoodieActiveTimeline(metaClient);
     timeline.setInstants(instants);
-    filteredTimeline = new HoodieParquetInputFormat().filterInstantsTimeline(timeline);
+    filteredTimeline = inputFormat.filterInstantsTimeline(timeline);
 
     // verify all remaining instants are returned.
     assertTrue(filteredTimeline.containsInstant(t1));

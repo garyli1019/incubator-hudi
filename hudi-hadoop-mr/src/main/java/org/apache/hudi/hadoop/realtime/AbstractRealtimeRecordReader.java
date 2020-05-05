@@ -25,6 +25,7 @@ import org.apache.hudi.common.table.log.LogReaderUtils;
 import org.apache.hudi.common.util.collection.Pair;
 import org.apache.hudi.exception.HoodieException;
 import org.apache.hudi.exception.HoodieIOException;
+import org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
@@ -65,25 +66,6 @@ import java.util.stream.Collectors;
  * Record Reader implementation to merge fresh avro data with base parquet data, to support real time queries.
  */
 public abstract class AbstractRealtimeRecordReader {
-
-  // Fraction of mapper/reducer task memory used for compaction of log files
-  public static final String COMPACTION_MEMORY_FRACTION_PROP = "compaction.memory.fraction";
-  public static final String DEFAULT_COMPACTION_MEMORY_FRACTION = "0.75";
-  // used to choose a trade off between IO vs Memory when performing compaction process
-  // Depending on outputfile size and memory provided, choose true to avoid OOM for large file
-  // size + small memory
-  public static final String COMPACTION_LAZY_BLOCK_READ_ENABLED_PROP = "compaction.lazy.block.read.enabled";
-  public static final String DEFAULT_COMPACTION_LAZY_BLOCK_READ_ENABLED = "true";
-
-  // Property to set the max memory for dfs inputstream buffer size
-  public static final String MAX_DFS_STREAM_BUFFER_SIZE_PROP = "hoodie.memory.dfs.buffer.max.size";
-  // Setting this to lower value of 1 MB since no control over how many RecordReaders will be started in a mapper
-  public static final int DEFAULT_MAX_DFS_STREAM_BUFFER_SIZE = 1024 * 1024; // 1 MB
-  // Property to set file path prefix for spillable file
-  public static final String SPILLABLE_MAP_BASE_PATH_PROP = "hoodie.memory.spillable.map.path";
-  // Default file path prefix for spillable file
-  public static final String DEFAULT_SPILLABLE_MAP_BASE_PATH = "/tmp/";
-
   private static final Logger LOG = LogManager.getLogger(AbstractRealtimeRecordReader.class);
 
   protected final HoodieRealtimeFileSplit split;
@@ -399,7 +381,8 @@ public abstract class AbstractRealtimeRecordReader {
   public long getMaxCompactionMemoryInBytes() {
     // jobConf.getMemoryForMapTask() returns in MB
     return (long) Math
-        .ceil(Double.parseDouble(jobConf.get(COMPACTION_MEMORY_FRACTION_PROP, DEFAULT_COMPACTION_MEMORY_FRACTION))
+        .ceil(Double.parseDouble(jobConf.get(HoodieRealtimeRecordReaderUtils.COMPACTION_MEMORY_FRACTION_PROP,
+            HoodieRealtimeRecordReaderUtils.DEFAULT_COMPACTION_MEMORY_FRACTION))
             * jobConf.getMemoryForMapTask() * 1024 * 1024L);
   }
 }
