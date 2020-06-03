@@ -608,7 +608,7 @@ public class HoodieCopyOnWriteTable<T extends HoodieRecordPayload> extends Hoodi
       Set<String> partitionPaths = profile.getPartitionPaths();
       long averageRecordSize =
           averageBytesPerRecord(metaClient.getActiveTimeline().getCommitTimeline().filterCompletedInstants(),
-              config.getCopyOnWriteRecordSizeEstimate());
+              config);
       LOG.info("AvgRecordSize => " + averageRecordSize);
       for (String partitionPath : partitionPaths) {
         WorkloadStat pStat = profile.getWorkloadStat(partitionPath);
@@ -755,8 +755,8 @@ public class HoodieCopyOnWriteTable<T extends HoodieRecordPayload> extends Hoodi
    * Obtains the average record size based on records written during previous commits. Used for estimating how many
    * records pack into one file.
    */
-  protected static long averageBytesPerRecord(HoodieTimeline commitTimeline, int defaultRecordSizeEstimate) {
-    long avgSize = defaultRecordSizeEstimate;
+  protected static long averageBytesPerRecord(HoodieTimeline commitTimeline, HoodieWriteConfig config) {
+    long avgSize = config.getCopyOnWriteRecordSizeEstimate();
     try {
       if (!commitTimeline.empty()) {
         // Go over the reverse ordered commits to get a more recent estimate of average record size.
@@ -767,7 +767,7 @@ public class HoodieCopyOnWriteTable<T extends HoodieRecordPayload> extends Hoodi
               .fromBytes(commitTimeline.getInstantDetails(instant).get(), HoodieCommitMetadata.class);
           long totalBytesWritten = commitMetadata.fetchTotalBytesWritten();
           long totalRecordsWritten = commitMetadata.fetchTotalRecordsWritten();
-          if (totalBytesWritten > 0 && totalRecordsWritten > 0) {
+          if (totalBytesWritten > config.getParquetSmallFileLimit() && totalRecordsWritten > 0) {
             avgSize = (long) Math.ceil((1.0 * totalBytesWritten) / totalRecordsWritten);
             break;
           }
