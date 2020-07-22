@@ -50,6 +50,18 @@ object DataSourceReadOptions {
   val QUERY_TYPE_INCREMENTAL_OPT_VAL = "incremental"
   val DEFAULT_QUERY_TYPE_OPT_VAL: String = QUERY_TYPE_SNAPSHOT_OPT_VAL
 
+  /**
+   * For Snapshot query on merge on read table. Use this key to define the payload class.
+   */
+  val MERGE_ON_READ_PAYLOAD_KEY = "hoodie.datasource.read.payload"
+  val DEFAULT_MERGE_ON_READ_PAYLOAD_VAL = ""
+
+  /**
+   * For Snapshot query on merge on read table. Use this key to define the column be used for comparing.
+   */
+  val MERGE_ON_READ_ORDERING_KEY = "hoodie.datasource.read.ordering"
+  val DEFAULT_MERGE_ON_READ_ORDERING_VAL = "ts"
+
   @Deprecated
   val VIEW_TYPE_OPT_KEY = "hoodie.datasource.view.type"
   @Deprecated

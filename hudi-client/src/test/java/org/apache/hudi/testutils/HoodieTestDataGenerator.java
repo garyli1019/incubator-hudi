@@ -727,6 +727,17 @@ public class HoodieTestDataGenerator {
     return result.stream();
   }
 
+  /**
+   * Generates deduped delete records previously inserted, randomly distributed across the keys above.
+   *
+   * @param instantTime Commit Timestamp
+   * @param n          Number of unique records
+   * @return List of hoodie records for delete
+   */
+  public List<HoodieRecord> generateUniqueDeleteRecords(String instantTime, Integer n) {
+    return generateUniqueDeleteRecordStream(instantTime, n).collect(Collectors.toList());
+  }
+
   public boolean deleteExistingKeyIfPresent(HoodieKey key) {
     Map<Integer, KeyPartition> existingKeys = existingKeysBySchema.get(TRIP_EXAMPLE_SCHEMA);
     Integer numExistingKeys = numKeysBySchema.get(TRIP_EXAMPLE_SCHEMA);

@@ -48,9 +48,9 @@ class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
   protected final RecordReader<NullWritable, ArrayWritable> parquetReader;
   private final Map<String, HoodieRecord<? extends HoodieRecordPayload>> deltaRecordMap;
 
-  public RealtimeCompactedRecordReader(HoodieRealtimeFileSplit split, JobConf job,
+  public RealtimeCompactedRecordReader(HoodieRealtimeFileSplit split, JobConf jobConf,
       RecordReader<NullWritable, ArrayWritable> realReader) throws IOException {
-    super(split, job);
+    super(split, jobConf);
     this.parquetReader = realReader;
     this.deltaRecordMap = getMergedLogRecordScanner().getRecords();
   }
@@ -69,7 +69,7 @@ class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
         split.getDeltaLogPaths(),
         usesCustomPayload ? getWriterSchema() : getReaderSchema(),
         split.getMaxCommitTime(),
-        getMaxCompactionMemoryInBytes(),
+        HoodieRealtimeRecordReaderUtils.getMaxCompactionMemoryInBytes(jobConf),
         Boolean.parseBoolean(jobConf.get(HoodieRealtimeConfig.COMPACTION_LAZY_BLOCK_READ_ENABLED_PROP, HoodieRealtimeConfig.DEFAULT_COMPACTION_LAZY_BLOCK_READ_ENABLED)),
         false,
         jobConf.getInt(HoodieRealtimeConfig.MAX_DFS_STREAM_BUFFER_SIZE_PROP, HoodieRealtimeConfig.DEFAULT_MAX_DFS_STREAM_BUFFER_SIZE),

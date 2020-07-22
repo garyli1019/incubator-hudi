@@ -22,7 +22,6 @@ import org.apache.hudi.common.model.HoodieAvroPayload;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.log.LogReaderUtils;
 import org.apache.hudi.exception.HoodieIOException;
-import org.apache.hudi.hadoop.config.HoodieRealtimeConfig;
 import org.apache.hudi.hadoop.utils.HoodieRealtimeRecordReaderUtils;
 
 import org.apache.avro.Schema;
@@ -146,13 +145,5 @@ public abstract class AbstractRealtimeRecordReader {
 
   public Schema getHiveSchema() {
     return hiveSchema;
-  }
-
-  public long getMaxCompactionMemoryInBytes() {
-    // jobConf.getMemoryForMapTask() returns in MB
-    return (long) Math
-        .ceil(Double.parseDouble(jobConf.get(HoodieRealtimeConfig.COMPACTION_MEMORY_FRACTION_PROP,
-            HoodieRealtimeConfig.DEFAULT_COMPACTION_MEMORY_FRACTION))
-            * jobConf.getMemoryForMapTask() * 1024 * 1024L);
   }
 }
