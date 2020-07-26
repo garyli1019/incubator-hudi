@@ -18,15 +18,13 @@
 package org.apache.hudi.functional
 
 import org.apache.hudi.common.fs.FSUtils
-import org.apache.hudi.common.model.OverwriteWithLatestAvroPayload
 import org.apache.hudi.config.HoodieWriteConfig
 import org.apache.hudi.testutils.{DataSourceTestUtils, HoodieTestDataGenerator}
 import org.apache.hudi.{DataSourceReadOptions, DataSourceWriteOptions, HoodieDataSourceHelpers}
 import org.apache.hadoop.fs.FileSystem
-
 import org.apache.log4j.LogManager
 import org.apache.spark.sql._
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions._
 import org.junit.jupiter.api.Assertions.{assertEquals, assertTrue}
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.api.{BeforeEach, Test}
@@ -84,7 +82,7 @@ class TestMORDataSource {
     assertEquals(100, hudiRODF1.count()) // still 100, since we only updated
   }
 
-  @Test def testMORDataSource() {
+  @Test def testMerging() {
     // First Operation:
     // Producing parquet files to three default partitions.
     // SNAPSHOT view on MOR table with parquet files only.
@@ -100,8 +98,8 @@ class TestMORDataSource {
     assertTrue(HoodieDataSourceHelpers.hasNewCommits(fs, basePath, "000"))
     val hudiSnapshotDF1 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     assertEquals(100, hudiSnapshotDF1.count()) // still 100, since we only updated
 
@@ -116,8 +114,8 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF2 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     assertEquals(100, hudiSnapshotDF2.count()) // still 100, since we only updated
     val commit1Time = hudiSnapshotDF1.select("_hoodie_commit_time").head().get(0).toString
@@ -126,10 +124,10 @@ class TestMORDataSource {
     assertTrue(commit2Time > commit1Time)
     assertEquals(100, hudiSnapshotDF2.join(hudiSnapshotDF1, Seq("_hoodie_record_key"), "left").count())
 
-    // Test Skip merge
+    // Unmerge
     val hudiSnapshotSkipMergeDF2 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, DataSourceReadOptions.DEFAULT_MERGE_ON_READ_PAYLOAD_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_UNMERGE_VAL)
       .load(basePath + "/*/*/*/*")
     assertEquals(200, hudiSnapshotSkipMergeDF2.count())
     assertEquals(100, hudiSnapshotSkipMergeDF2.select("_hoodie_record_key").distinct().count())
@@ -152,8 +150,8 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF3 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     // still 100, because we only updated the existing records
     assertEquals(100, hudiSnapshotDF3.count())
@@ -179,8 +177,8 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF4 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     // 200, because we insert 100 records to a new partition
     assertEquals(200, hudiSnapshotDF4.count())
@@ -201,14 +199,14 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF5 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     assertEquals(200, hudiSnapshotDF5.count())
   }
 
   @Test
-  def testPayloadToDelete() {
+  def testDelete() {
     // First Operation:
     // Producing parquet files to three default partitions.
     // SNAPSHOT view on MOR table with parquet files only.
@@ -238,8 +236,8 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF2 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     assertEquals(50, hudiSnapshotDF2.count()) // 50 records were deleted
     assertEquals(hudiSnapshotDF2.select("_hoodie_commit_time").distinct().count(), 1)
@@ -247,6 +245,13 @@ class TestMORDataSource {
     val commit2Time = hudiSnapshotDF2.select("_hoodie_commit_time").head().get(0).toString
     assertTrue(commit1Time.equals(commit2Time))
     assertEquals(50, hudiSnapshotDF2.join(hudiSnapshotDF1, Seq("_hoodie_record_key"), "left").count())
+
+    // unmerge query, skip the delete records
+    val hudiSnapshotDF2Unmerge = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_UNMERGE_VAL)
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, hudiSnapshotDF2Unmerge.count())
 
     // Third Operation:
     // Upsert 50 delete records to delete the reset
@@ -259,9 +264,132 @@ class TestMORDataSource {
       .save(basePath)
     val hudiSnapshotDF3 = spark.read.format("org.apache.hudi")
       .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
-      .option(DataSourceReadOptions.MERGE_ON_READ_PAYLOAD_KEY, classOf[OverwriteWithLatestAvroPayload].getName)
-      .option(DataSourceReadOptions.MERGE_ON_READ_ORDERING_KEY, "timestamp")
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
       .load(basePath + "/*/*/*/*")
     assertEquals(0, hudiSnapshotDF3.count()) // 100 records were deleted, 0 record to load
+  }
+
+  @Test
+  def testPrunedFiltered() {
+    // First Operation:
+    // Producing parquet files to three default partitions.
+    // SNAPSHOT view on MOR table with parquet files only.
+    val records1 = DataSourceTestUtils.convertToStringList(dataGen.generateInserts("001", 100)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option("hoodie.compact.inline", "false") // else fails due to compaction & deltacommit instant times being same
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL)
+      .option(DataSourceWriteOptions.TABLE_TYPE_OPT_KEY, DataSourceWriteOptions.MOR_TABLE_TYPE_OPT_VAL)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+    val hudiSnapshotDF1 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, hudiSnapshotDF1.count())
+    // select nested columns with order different from the actual schema
+    assertEquals("amount,currency,tip_history,_hoodie_commit_seqno",
+      hudiSnapshotDF1
+        .select("fare.amount", "fare.currency", "tip_history", "_hoodie_commit_seqno")
+        .orderBy(desc("_hoodie_commit_seqno"))
+        .columns.mkString(","))
+
+    // Second Operation:
+    // Upsert 50 update records
+    // Snopshot view should read 100 records
+    val records2 = DataSourceTestUtils
+      .convertToStringList(dataGen.generateUniqueUpdates("002", 50))
+      .toList
+    val inputDF2: Dataset[Row] = spark.read.json(spark.sparkContext.parallelize(records2, 2))
+    inputDF2.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .mode(SaveMode.Append)
+      .save(basePath)
+    val hudiSnapshotDF2 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
+      .load(basePath + "/*/*/*/*")
+
+    val commit1Time = hudiSnapshotDF1.select("_hoodie_commit_time").head().get(0).toString
+
+    // filter first commit and only read log records
+    assertEquals(50,  hudiSnapshotDF2.select("_hoodie_commit_seqno", "fare.amount", "fare.currency", "tip_history")
+      .filter(col("_hoodie_commit_time") > commit1Time).count())
+
+    // select nested columns with order different from the actual schema
+    assertEquals("amount,currency,tip_history,_hoodie_commit_seqno",
+      hudiSnapshotDF2
+      .select("fare.amount", "fare.currency", "tip_history", "_hoodie_commit_seqno")
+      .orderBy(desc("_hoodie_commit_seqno"))
+      .columns.mkString(","))
+
+    // Correctly loading type
+    val sampleRow = hudiSnapshotDF2
+      .select("begin_lat", "current_date", "fare.currency", "tip_history", "nation")
+      .orderBy(desc("_hoodie_commit_time"))
+      .head()
+    assertEquals(sampleRow.getDouble(0), sampleRow.get(0))
+    assertEquals(sampleRow.getLong(1), sampleRow.get(1))
+    assertEquals(sampleRow.getString(2), sampleRow.get(2))
+    assertEquals(sampleRow.getSeq(3), sampleRow.get(3))
+    assertEquals(sampleRow.getStruct(4), sampleRow.get(4))
+
+    // make sure show() work
+    hudiSnapshotDF1.show(1)
+    hudiSnapshotDF2.show(1)
+  }
+
+  @Test
+  def testVectorizedReader() {
+    assertTrue(spark.conf.get("spark.sql.parquet.enableVectorizedReader").toBoolean)
+    // Vectorized Reader will only be triggered with AtomicType schema,
+    // which is not null, UDTs, arrays, structs, and maps.
+    val schema = HoodieTestDataGenerator.SHORT_TRIP_SCHEMA
+    val records1 = DataSourceTestUtils.convertToStringList(dataGen.generateInsertsAsPerSchema("001", 100, schema)).toList
+    val inputDF1 = spark.read.json(spark.sparkContext.parallelize(records1, 2))
+    inputDF1.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .option("hoodie.compact.inline", "false") // else fails due to compaction & deltacommit instant times being same
+      .option(DataSourceWriteOptions.OPERATION_OPT_KEY, DataSourceWriteOptions.INSERT_OPERATION_OPT_VAL)
+      .option(DataSourceWriteOptions.TABLE_TYPE_OPT_KEY, DataSourceWriteOptions.MOR_TABLE_TYPE_OPT_VAL)
+      .mode(SaveMode.Overwrite)
+      .save(basePath)
+    val hudiSnapshotDF1 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, hudiSnapshotDF1.count())
+
+    val records2 = DataSourceTestUtils
+      .convertToStringList(dataGen.generateUniqueUpdatesAsPerSchema("002", 50, schema))
+      .toList
+    val inputDF2: Dataset[Row] = spark.read.json(spark.sparkContext.parallelize(records2, 2))
+    inputDF2.write.format("org.apache.hudi")
+      .options(commonOpts)
+      .mode(SaveMode.Append)
+      .save(basePath)
+    val hudiSnapshotDF2 = spark.read.format("org.apache.hudi")
+      .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_SNAPSHOT_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_CLASS_OPT_KEY, DataSourceReadOptions.DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL)
+      .option(DataSourceReadOptions.READ_PAYLOAD_ORDERING_OPT_KEY, "timestamp")
+      .load(basePath + "/*/*/*/*")
+    assertEquals(100, hudiSnapshotDF2.count())
+
+    // loading correct type
+    val sampleRow = hudiSnapshotDF2
+      .select("fare", "driver", "_hoodie_is_deleted")
+      .head()
+    assertEquals(sampleRow.getDouble(0), sampleRow.get(0))
+    assertEquals(sampleRow.getString(1), sampleRow.get(1))
+    assertEquals(sampleRow.getBoolean(2), sampleRow.get(2))
+
+    // test show()
+    hudiSnapshotDF1.show(1)
+    hudiSnapshotDF2.show(1)
   }
 }

@@ -53,14 +53,15 @@ object DataSourceReadOptions {
   /**
    * For Snapshot query on merge on read table. Use this key to define the payload class.
    */
-  val MERGE_ON_READ_PAYLOAD_KEY = "hoodie.datasource.read.payload"
-  val DEFAULT_MERGE_ON_READ_PAYLOAD_VAL = ""
+  val READ_PAYLOAD_CLASS_OPT_KEY = "hoodie.datasource.read.payload"
+  val READ_PAYLOAD_CLASS_OPT_UNMERGE_VAL = "unmerge"
+  val DEFAULT_READ_PAYLOAD_CLASS_OPT_VAL = classOf[OverwriteWithLatestAvroPayload].getName
 
   /**
    * For Snapshot query on merge on read table. Use this key to define the column be used for comparing.
    */
-  val MERGE_ON_READ_ORDERING_KEY = "hoodie.datasource.read.ordering"
-  val DEFAULT_MERGE_ON_READ_ORDERING_VAL = "ts"
+  val READ_PAYLOAD_ORDERING_OPT_KEY = "hoodie.datasource.read.ordering"
+  val DEFAULT_READ_PAYLOAD_ORDERING_OPT_VAL = "ts"
 
   @Deprecated
   val VIEW_TYPE_OPT_KEY = "hoodie.datasource.view.type"

@@ -64,17 +64,17 @@ class DefaultSource extends RelationProvider
     val fs = FSUtils.getFs(path.get, sqlContext.sparkContext.hadoopConfiguration)
     val globPaths = HudiSparkUtils.checkAndGlobPathIfNecessary(Seq(path.get), fs)
     val tablePath = DataSourceUtils.getTablePath(fs, globPaths.toArray)
-    val metaClient = new HoodieTableMetaClient(fs.getConf, tablePath)
     if (parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_SNAPSHOT_OPT_VAL)) {
+      val metaClient = new HoodieTableMetaClient(fs.getConf, tablePath)
       if (metaClient.getTableType.equals(HoodieTableType.MERGE_ON_READ)) {
-        new SnapshotRelation(sqlContext, optParams, schema, globPaths, metaClient)
+        new MergeOnReadSnapshotRelation(sqlContext, optParams, schema, globPaths, metaClient)
       } else {
         getBaseFileOnlyView(sqlContext, parameters, schema)
       }
     } else if(parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_READ_OPTIMIZED_OPT_VAL)) {
       getBaseFileOnlyView(sqlContext, parameters, schema)
     } else if (parameters(QUERY_TYPE_OPT_KEY).equals(QUERY_TYPE_INCREMENTAL_OPT_VAL)) {
-      new IncrementalRelation(sqlContext, tablePath, optParams, schema, metaClient)
+      new IncrementalRelation(sqlContext, tablePath, optParams, schema)
     } else {
       throw new HoodieException("Invalid query type :" + parameters(QUERY_TYPE_OPT_KEY))
     }
