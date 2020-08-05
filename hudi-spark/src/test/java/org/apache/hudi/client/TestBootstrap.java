@@ -35,6 +35,7 @@ import org.apache.hudi.common.model.HoodieTableType;
 import org.apache.hudi.common.table.timeline.HoodieInstant;
 import org.apache.hudi.common.table.timeline.HoodieInstant.State;
 import org.apache.hudi.common.table.timeline.HoodieTimeline;
+import org.apache.hudi.common.testutils.FileSystemTestUtils;
 import org.apache.hudi.common.testutils.HoodieTestDataGenerator;
 import org.apache.hudi.common.testutils.HoodieTestUtils;
 import org.apache.hudi.common.testutils.RawTripTestPayload;
@@ -356,6 +357,15 @@ public class TestBootstrap extends HoodieClientTestBase {
       List<HoodieFileStatus> files = BootstrapUtils.getAllLeafFoldersWithFiles(metaClient.getFs(), bootstrapBasePath,
           (status) -> status.getName().endsWith(".parquet"))
           .stream().flatMap(x -> x.getValue().stream()).collect(Collectors.toList());
+
+      LOG.warn(">>>> TestBootstrap : "
+          + "\n\t files:" + files.stream().map(f -> f.getPath().getUri()).collect(Collectors.toList())
+          + "\n\t numVersions:" + numVersions
+          + "\n\t numFiles:" + files.size()
+          + "\n\t bootstrapBasePath:" + FileSystemTestUtils.listRecursive(metaClient.getFs(), new Path(bootstrapBasePath))
+          + "\n\t basePath:" + FileSystemTestUtils.listRecursive(metaClient.getFs(), new Path(basePath))
+      );
+
       assertEquals(files.size() * numVersions,
           sqlContext.sql("select distinct _hoodie_file_name from bootstrapped").count());
     }
