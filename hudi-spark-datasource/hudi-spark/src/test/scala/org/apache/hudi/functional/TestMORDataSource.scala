@@ -460,6 +460,7 @@ class TestMORDataSource extends HoodieClientTestBase {
 
   @Test
   def testVectorizedReader() {
+
     spark.conf.set("spark.sql.parquet.enableVectorizedReader", true)
     assertTrue(spark.conf.get("spark.sql.parquet.enableVectorizedReader").toBoolean)
     // Vectorized Reader will only be triggered with AtomicType schema,
